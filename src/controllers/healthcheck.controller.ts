@@ -1,8 +1,8 @@
+import { Request, Response } from "express";
 import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/asyncHandler";
 
-const healthCheck = asyncHandler(async (_req, res) => {
+const healthCheck = async (_req: Request, res: Response) => {
   try {
     return res
       .status(200)
@@ -10,6 +10,6 @@ const healthCheck = asyncHandler(async (_req, res) => {
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
-});
+};
 
 export { healthCheck };

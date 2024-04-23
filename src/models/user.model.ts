@@ -10,18 +10,21 @@ export interface User extends Document {
   about: string;
   socialMedia?: string[];
   profile_bg_color?: string;
-  verifyCode: String;
+  verifyCode: string;
   verifyCodeExpiry: Date;
   isVerified: boolean;
   isAcceptingMessage: boolean;
   isAcceptingAppointment: boolean;
   refreshToken?: string;
+  isPasswordCorrect(password: string): Promise<boolean>;
+  generateAccessToken(): string;
+  generateRefreshToken(): string;
 }
 
 const userSchema: Schema<User> = new Schema(
   {
     username: {
-      tpye: String,
+      type: String,
       trim: true,
       unique: true,
       index: true,
@@ -58,7 +61,7 @@ const userSchema: Schema<User> = new Schema(
     profile_bg_color: {
       type: String,
       default: "#EAF0F1",
-      required: [true, "Give the profile bg color"],
+      // required: [true, "Give the profile bg color"],
     },
 
     verifyCode: {
@@ -101,7 +104,20 @@ userSchema.methods.isPasswordCorrect = async function (password: string) {
   return await bcryptjs.compare(password, this.password);
 };
 
-userSchema.methods.genrateRefreshToken = function () {
+userSchema.methods.generateAccessToken = function () {
+  return jwt.sign(
+    {
+      _id: this._id,
+      email: this.email,
+      userName: this.userName,
+      fullName: this.fullName,
+    },
+    process.env.ACCESS_TOKEN_SECRET as string,
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+  );
+};
+
+userSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
     {
       _id: this._id,
