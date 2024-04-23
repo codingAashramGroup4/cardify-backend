@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 export interface User extends Document {
   username: string;
   email: string;
-  avatar?: string;
+  avatar_url?: string;
   password: string;
   about: string;
   socialMedia?: string[];
@@ -41,11 +41,25 @@ const userSchema: Schema<User> = new Schema(
       required: [true, "User name is requrired"],
     },
 
-    socialMedia: [
-      {
-        type: String,
-      },
-    ],
+    socialMedia: {
+      type: [String],
+      default: [],
+    },
+
+    avatar_url: {
+      type: String,
+      required: [true, "Avatar is Required To Create the profile"],
+    },
+
+    about: {
+      type: String,
+    },
+
+    profile_bg_color: {
+      type: String,
+      default: "#EAF0F1",
+      required: [true, "Give the profile bg color"],
+    },
 
     verifyCode: {
       type: String,
