@@ -442,6 +442,10 @@ const updateUserAccountDetails = async (req: CustomRequest, res: Response) => {
 
     const { about, socialMedia } = result.data;
 
+    if (!about || !socialMedia) {
+      throw new ApiError(403, "For Update Details One field is required");
+    }
+
     const userId = req.user?._id;
 
     const user = await User.findById(userId);

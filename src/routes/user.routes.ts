@@ -28,10 +28,10 @@ router.route("/logout").post(verifyJwt, logoutUser);
 router.route("/getCurrentUser").get(verifyJwt, getCurrentUser);
 router
   .route("/update-account-details")
-  .get(verifyJwt, updateUserAccountDetails);
+  .patch(verifyJwt, updateUserAccountDetails);
 
 router
   .route("/update-user-avatar")
-  .post(upload.single("avatar"), updateUserAvatar);
+  .patch(upload.single("avatar"), updateUserAvatar);
 
 export default router;
