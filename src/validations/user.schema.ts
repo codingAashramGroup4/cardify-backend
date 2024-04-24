@@ -46,7 +46,6 @@ const verifyOtpSchemaValidation = z.object({
     .max(25, { message: "Username Must Be Less Then 25 Characters" })
     .regex(/^[a-zA-Z0-9_]+$/, "Username must not contains special character")
     .optional(),
-  forgotPassword: z.boolean(),
 });
 
 const updateUserSchemaValidation = z.object({

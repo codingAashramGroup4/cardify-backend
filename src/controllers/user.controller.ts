@@ -181,7 +181,7 @@ const verifyOtp = async (req: Request, res: Response) => {
         .json(new ApiResponse(403, verifyOtpErrors, "Not A Valid Data"));
     }
 
-    const { username, forgotPassword, verifyCode } = result.data;
+    const { username, verifyCode } = result.data;
 
     // const username = req.params?.username;
     // const forgatePassword = req.params?.forgatePassword;
@@ -208,11 +208,19 @@ const verifyOtp = async (req: Request, res: Response) => {
     if (isCodeNotExpired && isCodeValid) {
       user.isVerified = true;
       await user.save();
-      return res
-        .status(200)
-        .json(
-          new ApiResponse(200, { success: true }, "User Verified Succesfully")
-        );
+      return res.status(200).json(
+        new ApiResponse(
+          200,
+          {
+            success: true,
+            data: {
+              email: user.email,
+              username: user.username,
+            },
+          },
+          "User Verified Succesfully"
+        )
+      );
     } else if (!isCodeNotExpired) {
       return res
         .status(404)
@@ -332,7 +340,7 @@ const logoutUser = async (req: CustomRequest, res: Response) => {
   }
 };
 
-const validEmail = async (req: CustomRequest, res: Response) => {
+const genrateOptForValidEmail = async (req: CustomRequest, res: Response) => {
   try {
     const result = forgatePasswordSchemaValidation.safeParse(req.body);
     if (!result.success) {
@@ -362,15 +370,49 @@ const validEmail = async (req: CustomRequest, res: Response) => {
       throw new ApiError(404, "User is not verified please singup again");
     }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          { success: true, userEmail: existingUserByEmail.email },
-          "Email Is Valid"
-        )
-      );
+    // genrate otp
+    const verifyCode = Math.floor(100000 + Math.random() * 90000).toString();
+
+    const verifyCodeExpiryDate = new Date();
+    verifyCodeExpiryDate.setHours(verifyCodeExpiryDate.getHours() + 1);
+
+    // send verification email
+    const mailSend = await sendVerificationEmail(
+      existingUserByEmail.email,
+      existingUserByEmail.username,
+      verifyCode
+    );
+
+    if (!mailSend) {
+      return res
+        .status(403)
+        .json(
+          new ApiResponse(
+            403,
+            { success: false },
+            "Unable to send you mail check your email id"
+          )
+        );
+    }
+
+    existingUserByEmail.verifyCode = verifyCode;
+    existingUserByEmail.verifyCodeExpiry = verifyCodeExpiryDate;
+
+    await existingUserByEmail.save({ validateBeforeSave: false });
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          success: true,
+          data: {
+            email: existingUserByEmail.email,
+            username: existingUserByEmail.username,
+          },
+        },
+        "Email Is Valid Opt is Genrated Check Your Email"
+      )
+    );
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
@@ -402,9 +444,20 @@ const forgotPassword = async (req: CustomRequest, res: Response) => {
     if (!existingUserByEmail) {
       throw new ApiError(404, "Email Not Found");
     }
-
+    const isCodeNotExpired =
+      new Date(existingUserByEmail.verifyCodeExpiry) > new Date();
     if (!existingUserByEmail.isVerified) {
       throw new ApiError(404, "User is not verified please singup again");
+    } else if (!isCodeNotExpired) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            { success: false },
+            "Verification Code Has Exiperd Please Singup again to get a new Code"
+          )
+        );
     } else {
       if (!oldPassword || !newPassword) {
         throw new ApiError(500, "OldPassword & NewPassword  Field Requred");
@@ -417,34 +470,7 @@ const forgotPassword = async (req: CustomRequest, res: Response) => {
         throw new ApiError(400, "Old Password Is Not Correct");
       }
 
-      // genrate otp
-      const verifyCode = Math.floor(100000 + Math.random() * 90000).toString();
-
-      const verifyCodeExpiryDate = new Date();
-      verifyCodeExpiryDate.setHours(verifyCodeExpiryDate.getHours() + 1);
-
-      // send verification email
-      const mailSend = await sendVerificationEmail(
-        existingUserByEmail.email,
-        existingUserByEmail.username,
-        verifyCode
-      );
-
-      if (!mailSend) {
-        return res
-          .status(403)
-          .json(
-            new ApiResponse(
-              403,
-              { success: false },
-              "Unable to send you mail check your email id"
-            )
-          );
-      }
-
       existingUserByEmail.password = newPassword;
-      existingUserByEmail.verifyCode = verifyCode;
-      existingUserByEmail.verifyCodeExpiry = verifyCodeExpiryDate;
 
       await existingUserByEmail.save({ validateBeforeSave: false });
 
@@ -586,5 +612,5 @@ export {
   updateUserAccountDetails,
   updateUserAvatar,
   forgotPassword,
-  validEmail,
+  genrateOptForValidEmail,
 };

@@ -10,7 +10,7 @@ import {
   updateUserAvatar,
   verifyOtp,
   forgotPassword,
-  validEmail,
+  genrateOptForValidEmail,
 } from "../controllers/user.controller";
 import { verifyJwt } from "../middlewares/auth.middleware";
 
@@ -21,7 +21,7 @@ router.route("/verify-code").post(verifyOtp);
 
 router.route("/login").post(loginUser);
 
-router.route("/check-valid-email").post(validEmail);
+router.route("/genrate-otp-for-valid-email").post(genrateOptForValidEmail);
 router.route("/forgot-password").post(forgotPassword);
 
 //protected -route
