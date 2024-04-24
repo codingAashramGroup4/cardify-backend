@@ -54,9 +54,26 @@ const updateUserSchemaValidation = z.object({
 
   socialMedia: z.array(z.string()).optional(),
 });
+
+const forgatePasswordSchemaValidation = z.object({
+  email: z.string().email({ message: "Invalid Email Address" }).optional(),
+
+  oldPassword: z
+    .string()
+    .min(5, { message: "Password must  be more then 5 character" })
+    .max(10, { message: "Password can be max of 10 charcters" })
+    .optional(),
+
+  newPassword: z
+    .string()
+    .min(5, { message: "Password must  be more then 5 character" })
+    .max(10, { message: "Password can be max of 10 charcters" })
+    .optional(),
+});
 export {
   singUpSchemaValidation,
   userSchemaValidation,
   verifyOtpSchemaValidation,
   updateUserSchemaValidation,
+  forgatePasswordSchemaValidation,
 };

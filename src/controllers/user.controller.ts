@@ -1,5 +1,6 @@
 import { ApiError } from "../utils/ApiError";
 import {
+  forgatePasswordSchemaValidation,
   singUpSchemaValidation,
   updateUserSchemaValidation,
   userSchemaValidation,
@@ -70,12 +71,6 @@ const signUpUser = async (req: Request, res: Response) => {
     const { username, email, password, socialMedia, about, profile_bg_color } =
       result.data;
 
-    const avatarLocalPath = req.file?.path;
-
-    if (!avatarLocalPath) {
-      throw new ApiError(400, "Avatar  must be needed to create your profile");
-    }
-
     // check dose username alredy taken
 
     const existingVerifiedUsername = await User.findOne({
@@ -124,6 +119,15 @@ const signUpUser = async (req: Request, res: Response) => {
               "Unable to send you mail check your email id"
             )
           );
+      }
+
+      const avatarLocalPath = req.file?.path;
+
+      if (!avatarLocalPath) {
+        throw new ApiError(
+          400,
+          "Avatar  must be needed to create your profile"
+        );
       }
 
       const avatar = await uploadOnCloudinary(avatarLocalPath);
@@ -322,6 +326,93 @@ const logoutUser = async (req: CustomRequest, res: Response) => {
   }
 };
 
+const forgotPassword = async (req: CustomRequest, res: Response) => {
+  try {
+    const result = forgatePasswordSchemaValidation.safeParse(req.body);
+    if (!result.success) {
+      const forgatePassErrors =
+        result.error?.errors.map((err) => ({
+          code: err.code,
+          message: err.message,
+        })) || [];
+
+      return res
+        .status(403)
+        .json(new ApiResponse(403, forgatePassErrors, "Not A Valid Data"));
+    }
+
+    const { email, oldPassword, newPassword } = result.data;
+
+    if (!email) {
+      throw new ApiError(408, "Email Field is Required ");
+    }
+
+    const existingUserByEmail = await User.findOne({ email });
+
+    if (!existingUserByEmail) {
+      throw new ApiError(404, "Email Not Found");
+    }
+
+    if (!existingUserByEmail.isVerified) {
+      throw new ApiError(404, "User is not verified please singup again");
+    } else {
+      if (!oldPassword || !newPassword) {
+        throw new ApiError(500, "OldPassword & NewPassword  Field Requred");
+      }
+
+      const isOldPasswordCorrect =
+        await existingUserByEmail.isPasswordCorrect(oldPassword);
+
+      if (!isOldPasswordCorrect) {
+        throw new ApiError(400, "Old Password Is Not Correct");
+      }
+
+      // genrate otp
+      const verifyCode = Math.floor(100000 + Math.random() * 90000).toString();
+
+      const verifyCodeExpiryDate = new Date();
+      verifyCodeExpiryDate.setHours(verifyCodeExpiryDate.getHours() + 1);
+
+      // send verification email
+      const mailSend = await sendVerificationEmail(
+        existingUserByEmail.email,
+        existingUserByEmail.username,
+        verifyCode
+      );
+
+      if (!mailSend) {
+        return res
+          .status(403)
+          .json(
+            new ApiResponse(
+              403,
+              { success: false },
+              "Unable to send you mail check your email id"
+            )
+          );
+      }
+
+      existingUserByEmail.password = newPassword;
+      existingUserByEmail.verifyCode = verifyCode;
+      existingUserByEmail.verifyCodeExpiry = verifyCodeExpiryDate;
+
+      await existingUserByEmail.save({ validateBeforeSave: false });
+
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            { succes: true, username: existingUserByEmail.username },
+            "Password Update Succesfully"
+          )
+        );
+    }
+  } catch (error: any) {
+    throw new ApiError(500, error?.message);
+  }
+};
+
 const getCurrentUser = async (req: CustomRequest, res: Response) => {
   try {
     return res
@@ -440,4 +531,5 @@ export {
   getCurrentUser,
   updateUserAccountDetails,
   updateUserAvatar,
+  forgotPassword,
 };
