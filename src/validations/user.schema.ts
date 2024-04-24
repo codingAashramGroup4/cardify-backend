@@ -38,12 +38,15 @@ const userSchemaValidation = z.object({
 const verifyOtpSchemaValidation = z.object({
   verifyCode: z
     .string()
-    .length(6, { message: "Verification Code Must Be  6 Digit" }),
+    .length(6, { message: "Verification Code Must Be  6 Digit" })
+    .optional(),
   username: z
     .string()
     .min(3, { message: "Username Must Be Atleast 3 charcters" })
     .max(25, { message: "Username Must Be Less Then 25 Characters" })
-    .regex(/^[a-zA-Z0-9_]+$/, "Username must not contains special character"),
+    .regex(/^[a-zA-Z0-9_]+$/, "Username must not contains special character")
+    .optional(),
+  forgotPassword: z.boolean(),
 });
 
 const updateUserSchemaValidation = z.object({

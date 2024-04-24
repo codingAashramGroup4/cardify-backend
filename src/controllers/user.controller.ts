@@ -148,15 +148,18 @@ const signUpUser = async (req: Request, res: Response) => {
       });
     }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          403,
-          { success: true },
-          "User Registered Succesfully ! Kindly Verify Your Email "
-        )
-      );
+    return res.status(200).json(
+      new ApiResponse(
+        403,
+        {
+          success: true,
+          user: {
+            username: username,
+          },
+        },
+        "User Registered Succesfully ! Kindly Verify Your Email "
+      )
+    );
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
@@ -178,7 +181,10 @@ const verifyOtp = async (req: Request, res: Response) => {
         .json(new ApiResponse(403, verifyOtpErrors, "Not A Valid Data"));
     }
 
-    const { username, verifyCode } = result.data;
+    const { username, forgotPassword, verifyCode } = result.data;
+
+    // const username = req.params?.username;
+    // const forgatePassword = req.params?.forgatePassword;
 
     const user = await User.findOne({
       username,
@@ -320,6 +326,50 @@ const logoutUser = async (req: CustomRequest, res: Response) => {
       .clearCookie("refreshToken", options)
       .json(
         new ApiResponse(200, { success: true }, "User Logout  Successfully")
+      );
+  } catch (error: any) {
+    throw new ApiError(500, error?.message);
+  }
+};
+
+const validEmail = async (req: CustomRequest, res: Response) => {
+  try {
+    const result = forgatePasswordSchemaValidation.safeParse(req.body);
+    if (!result.success) {
+      const forgatePassErrors =
+        result.error?.errors.map((err) => ({
+          code: err.code,
+          message: err.message,
+        })) || [];
+
+      return res
+        .status(403)
+        .json(new ApiResponse(403, forgatePassErrors, "Not A Valid Data"));
+    }
+
+    const { email } = result.data;
+    if (!email) {
+      throw new ApiError(408, "Email Field is Required ");
+    }
+
+    const existingUserByEmail = await User.findOne({ email });
+
+    if (!existingUserByEmail) {
+      throw new ApiError(404, "Email Not Found");
+    }
+
+    if (!existingUserByEmail.isVerified) {
+      throw new ApiError(404, "User is not verified please singup again");
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { success: true, userEmail: existingUserByEmail.email },
+          "Email Is Valid"
+        )
       );
   } catch (error: any) {
     throw new ApiError(500, error?.message);
@@ -536,4 +586,5 @@ export {
   updateUserAccountDetails,
   updateUserAvatar,
   forgotPassword,
+  validEmail,
 };
