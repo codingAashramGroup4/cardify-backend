@@ -224,7 +224,7 @@ const verifyOtp = async (req: Request, res: Response) => {
 
     if (isCodeNotExpired && isCodeValid) {
       user.isVerified = true;
-      await user.save();
+      await user.save({ validateBeforeSave: false });
       return res.status(200).json(
         new ApiResponse(
           200,
@@ -489,7 +489,7 @@ const forgotPassword = async (req: CustomRequest, res: Response) => {
 
       existingUserByEmail.password = newPassword;
 
-      await existingUserByEmail.save({ validateBeforeSave: false });
+      await existingUserByEmail.save();
 
       return res
         .status(200)
