@@ -123,21 +123,6 @@ const signUpUser = async (req: Request, res: Response) => {
       const verifyCodeExpiryDate = new Date();
       verifyCodeExpiryDate.setHours(verifyCodeExpiryDate.getHours() + 1);
 
-      // send verification email
-      const mailSend = await sendVerificationEmail(email, username, verifyCode);
-
-      if (!mailSend) {
-        return res
-          .status(403)
-          .json(
-            new ApiResponse(
-              403,
-              { success: false },
-              "Unable to send you mail check your email id"
-            )
-          );
-      }
-
       const avatarLocalPath = req.file?.path;
 
       if (!avatarLocalPath) {
@@ -163,6 +148,21 @@ const signUpUser = async (req: Request, res: Response) => {
         isAcceptingMessage: false,
         isAcceptingAppointment: true,
       });
+    }
+
+    // send verification email
+    const mailSend = await sendVerificationEmail(email, username, verifyCode);
+
+    if (!mailSend) {
+      return res
+        .status(403)
+        .json(
+          new ApiResponse(
+            403,
+            { success: false },
+            "Unable to send you mail check your email id"
+          )
+        );
     }
 
     return res.status(200).json(
