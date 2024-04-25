@@ -96,6 +96,23 @@ const signUpUser = async (req: Request, res: Response) => {
         throw new ApiError(402, "Your Email is Verified Already");
       } else {
         // now user exist but not verified so send verification email also no need to update the avatar here
+
+        const avatarLocalPath = req.file?.path;
+
+        if (!avatarLocalPath) {
+          throw new ApiError(
+            400,
+            "Avatar  must be needed to create your profile"
+          );
+        }
+
+        const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+        existingUserEmail.username = username;
+        existingUserEmail.avatar_url = avatar?.url;
+        existingUserEmail.about = about || " ";
+        existingUserEmail.socialMedia = socialMedia;
+        existingUserEmail.profile_bg_color = profile_bg_color;
         existingUserEmail.password = password;
         existingUserEmail.verifyCode = verifyCode;
         existingUserEmail.verifyCodeExpiry = new Date(Date.now() + 3600000);
