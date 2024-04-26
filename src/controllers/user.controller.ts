@@ -16,6 +16,7 @@ import {
 import { ObjectId } from "mongoose";
 import { Request, Response } from "express";
 import { CustomRequest } from "../middlewares/auth.middleware";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const genrateAccessAndRefreshToken = async (userId: ObjectId) => {
   try {
@@ -41,7 +42,7 @@ const genrateAccessAndRefreshToken = async (userId: ObjectId) => {
   }
 };
 
-const signUpUser = async (req: Request, res: Response) => {
+const signUpUser =asyncHandler( async (req: Request, res: Response) => {
   /*
      1) get the data from the req parse it throw validation if validation error throw error
      2) check if existing username and email exist in db with isVerified :true if found throw error
@@ -57,6 +58,7 @@ const signUpUser = async (req: Request, res: Response) => {
     const result = singUpSchemaValidation.safeParse(req.body);
 
     if (!result.success) {
+      console.log("from if not result success")
       const singUpErrors =
         result.error?.errors.map((err) => ({
           code: err.code,
@@ -178,11 +180,12 @@ const signUpUser = async (req: Request, res: Response) => {
       )
     );
   } catch (error: any) {
+    console.log("from catch block ", error?.message)
     throw new ApiError(500, error?.message);
   }
-};
+});
 
-const verifyOtp = async (req: Request, res: Response) => {
+const verifyOtp = asyncHandler( async (req: Request, res: Response) => {
   try {
     const result = verifyOtpSchemaValidation.safeParse(req.body);
 
@@ -262,9 +265,9 @@ const verifyOtp = async (req: Request, res: Response) => {
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
-};
+});
 
-const loginUser = async (req: Request, res: Response) => {
+const loginUser = asyncHandler( async (req: Request, res: Response) => {
   try {
     const result = userSchemaValidation.safeParse(req.body);
     if (!result.success) {
@@ -321,9 +324,9 @@ const loginUser = async (req: Request, res: Response) => {
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
-};
+});
 
-const logoutUser = async (req: CustomRequest, res: Response) => {
+const logoutUser = asyncHandler( async (req: CustomRequest, res: Response) => {
   try {
     const userId = req.user?._id;
 
@@ -355,9 +358,9 @@ const logoutUser = async (req: CustomRequest, res: Response) => {
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
-};
+});
 
-const genrateOptForValidEmail = async (req: CustomRequest, res: Response) => {
+const genrateOptForValidEmail = asyncHandler( async (req: CustomRequest, res: Response) => {
   try {
     const result = forgatePasswordSchemaValidation.safeParse(req.body);
     if (!result.success) {
@@ -433,9 +436,9 @@ const genrateOptForValidEmail = async (req: CustomRequest, res: Response) => {
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
-};
+});
 
-const forgotPassword = async (req: CustomRequest, res: Response) => {
+const forgotPassword = asyncHandler( async (req: CustomRequest, res: Response) => {
   try {
     const result = forgatePasswordSchemaValidation.safeParse(req.body);
     if (!result.success) {
@@ -504,9 +507,9 @@ const forgotPassword = async (req: CustomRequest, res: Response) => {
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
-};
+});
 
-const getCurrentUser = async (req: CustomRequest, res: Response) => {
+const getCurrentUser = asyncHandler( async (req: CustomRequest, res: Response) => {
   try {
     return res
       .status(200)
@@ -516,9 +519,9 @@ const getCurrentUser = async (req: CustomRequest, res: Response) => {
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
-};
+});
 
-const updateUserAccountDetails = async (req: CustomRequest, res: Response) => {
+const updateUserAccountDetails = asyncHandler( async (req: CustomRequest, res: Response) => {
   try {
     const result = updateUserSchemaValidation.safeParse(req.body);
     if (!result.success) {
@@ -566,9 +569,9 @@ const updateUserAccountDetails = async (req: CustomRequest, res: Response) => {
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
-};
+});
 
-const updateUserAvatar = async (req: CustomRequest, res: Response) => {
+const updateUserAvatar = asyncHandler( async (req: CustomRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const avatarLocalPath = req?.file?.path;
@@ -618,7 +621,7 @@ const updateUserAvatar = async (req: CustomRequest, res: Response) => {
   } catch (error: any) {
     throw new ApiError(500, error?.message);
   }
-};
+});
 
 export {
   signUpUser,
