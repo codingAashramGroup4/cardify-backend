@@ -42,7 +42,7 @@ const genrateAccessAndRefreshToken = async (userId: ObjectId) => {
   }
 };
 
-const signUpUser =asyncHandler( async (req: Request, res: Response) => {
+const signUpUser = asyncHandler(async (req: Request, res: Response) => {
   /*
      1) get the data from the req parse it throw validation if validation error throw error
      2) check if existing username and email exist in db with isVerified :true if found throw error
@@ -58,7 +58,7 @@ const signUpUser =asyncHandler( async (req: Request, res: Response) => {
     const result = singUpSchemaValidation.safeParse(req.body);
 
     if (!result.success) {
-      console.log("from if not result success")
+      console.log("from if not result success");
       const singUpErrors =
         result.error?.errors.map((err) => ({
           code: err.code,
@@ -180,12 +180,12 @@ const signUpUser =asyncHandler( async (req: Request, res: Response) => {
       )
     );
   } catch (error: any) {
-    console.log("from catch block ", error?.message)
+    console.log("from catch block ", error?.message);
     throw new ApiError(500, error?.message);
   }
 });
 
-const verifyOtp = asyncHandler( async (req: Request, res: Response) => {
+const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   try {
     const result = verifyOtpSchemaValidation.safeParse(req.body);
 
@@ -267,7 +267,7 @@ const verifyOtp = asyncHandler( async (req: Request, res: Response) => {
   }
 });
 
-const loginUser = asyncHandler( async (req: Request, res: Response) => {
+const loginUser = asyncHandler(async (req: Request, res: Response) => {
   try {
     const result = userSchemaValidation.safeParse(req.body);
     if (!result.success) {
@@ -326,7 +326,7 @@ const loginUser = asyncHandler( async (req: Request, res: Response) => {
   }
 });
 
-const logoutUser = asyncHandler( async (req: CustomRequest, res: Response) => {
+const logoutUser = asyncHandler(async (req: CustomRequest, res: Response) => {
   try {
     const userId = req.user?._id;
 
@@ -360,268 +360,278 @@ const logoutUser = asyncHandler( async (req: CustomRequest, res: Response) => {
   }
 });
 
-const genrateOptForValidEmail = asyncHandler( async (req: CustomRequest, res: Response) => {
-  try {
-    const result = forgatePasswordSchemaValidation.safeParse(req.body);
-    if (!result.success) {
-      const forgatePassErrors =
-        result.error?.errors.map((err) => ({
-          code: err.code,
-          message: err.message,
-        })) || [];
+const genrateOptForValidEmail = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    try {
+      const result = forgatePasswordSchemaValidation.safeParse(req.body);
+      if (!result.success) {
+        const forgatePassErrors =
+          result.error?.errors.map((err) => ({
+            code: err.code,
+            message: err.message,
+          })) || [];
 
+        return res
+          .status(403)
+          .json(new ApiResponse(403, forgatePassErrors, "Not A Valid Data"));
+      }
+
+      const { email } = result.data;
+      if (!email) {
+        throw new ApiError(408, "Email Field is Required ");
+      }
+
+      const existingUserByEmail = await User.findOne({ email });
+
+      if (!existingUserByEmail) {
+        throw new ApiError(404, "Email Not Found");
+      }
+
+      if (!existingUserByEmail.isVerified) {
+        throw new ApiError(404, "User is not verified please singup again");
+      }
+
+      // genrate otp
+      const verifyCode = Math.floor(100000 + Math.random() * 90000).toString();
+
+      const verifyCodeExpiryDate = new Date();
+      verifyCodeExpiryDate.setHours(verifyCodeExpiryDate.getHours() + 1);
+
+      // send verification email
+      const mailSend = await sendVerificationEmail(
+        existingUserByEmail.email,
+        existingUserByEmail.username,
+        verifyCode
+      );
+
+      if (!mailSend) {
+        return res
+          .status(403)
+          .json(
+            new ApiResponse(
+              403,
+              { success: false },
+              "Unable to send you mail check your email id"
+            )
+          );
+      }
+
+      existingUserByEmail.verifyCode = verifyCode;
+      existingUserByEmail.verifyCodeExpiry = verifyCodeExpiryDate;
+
+      await existingUserByEmail.save({ validateBeforeSave: false });
+
+      return res.status(200).json(
+        new ApiResponse(
+          200,
+          {
+            success: true,
+            data: {
+              email: existingUserByEmail.email,
+              username: existingUserByEmail.username,
+            },
+          },
+          "Email Is Valid Opt is Genrated Check Your Email"
+        )
+      );
+    } catch (error: any) {
+      throw new ApiError(500, error?.message);
+    }
+  }
+);
+
+const forgotPassword = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    try {
+      const result = forgatePasswordSchemaValidation.safeParse(req.body);
+      if (!result.success) {
+        const forgatePassErrors =
+          result.error?.errors.map((err) => ({
+            code: err.code,
+            message: err.message,
+          })) || [];
+
+        return res
+          .status(403)
+          .json(new ApiResponse(403, forgatePassErrors, "Not A Valid Data"));
+      }
+
+      const { email, oldPassword, newPassword } = result.data;
+
+      if (!email) {
+        throw new ApiError(408, "Email Field is Required ");
+      }
+
+      const existingUserByEmail = await User.findOne({ email });
+
+      if (!existingUserByEmail) {
+        throw new ApiError(404, "Email Not Found");
+      }
+      const isCodeNotExpired =
+        new Date(existingUserByEmail.verifyCodeExpiry) > new Date();
+      if (!existingUserByEmail.isVerified) {
+        throw new ApiError(404, "User is not verified please singup again");
+      } else if (!isCodeNotExpired) {
+        return res
+          .status(404)
+          .json(
+            new ApiResponse(
+              404,
+              { success: false },
+              "Verification Code Has Exiperd Please Singup again to get a new Code"
+            )
+          );
+      } else {
+        if (!oldPassword || !newPassword) {
+          throw new ApiError(500, "OldPassword & NewPassword  Field Requred");
+        }
+
+        const isOldPasswordCorrect =
+          await existingUserByEmail.isPasswordCorrect(oldPassword);
+
+        if (!isOldPasswordCorrect) {
+          throw new ApiError(400, "Old Password Is Not Correct");
+        }
+
+        existingUserByEmail.password = newPassword;
+
+        await existingUserByEmail.save();
+
+        return res
+          .status(200)
+          .json(
+            new ApiResponse(
+              200,
+              { succes: true, username: existingUserByEmail.username },
+              "Password Update Succesfully"
+            )
+          );
+      }
+    } catch (error: any) {
+      throw new ApiError(500, error?.message);
+    }
+  }
+);
+
+const getCurrentUser = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    try {
       return res
-        .status(403)
-        .json(new ApiResponse(403, forgatePassErrors, "Not A Valid Data"));
-    }
-
-    const { email } = result.data;
-    if (!email) {
-      throw new ApiError(408, "Email Field is Required ");
-    }
-
-    const existingUserByEmail = await User.findOne({ email });
-
-    if (!existingUserByEmail) {
-      throw new ApiError(404, "Email Not Found");
-    }
-
-    if (!existingUserByEmail.isVerified) {
-      throw new ApiError(404, "User is not verified please singup again");
-    }
-
-    // genrate otp
-    const verifyCode = Math.floor(100000 + Math.random() * 90000).toString();
-
-    const verifyCodeExpiryDate = new Date();
-    verifyCodeExpiryDate.setHours(verifyCodeExpiryDate.getHours() + 1);
-
-    // send verification email
-    const mailSend = await sendVerificationEmail(
-      existingUserByEmail.email,
-      existingUserByEmail.username,
-      verifyCode
-    );
-
-    if (!mailSend) {
-      return res
-        .status(403)
+        .status(200)
         .json(
-          new ApiResponse(
-            403,
-            { success: false },
-            "Unable to send you mail check your email id"
-          )
+          new ApiResponse(200, req.user, "User Details Fetched Successfully")
         );
+    } catch (error: any) {
+      throw new ApiError(500, error?.message);
     }
+  }
+);
 
-    existingUserByEmail.verifyCode = verifyCode;
-    existingUserByEmail.verifyCodeExpiry = verifyCodeExpiryDate;
+const updateUserAccountDetails = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    try {
+      const result = updateUserSchemaValidation.safeParse(req.body);
+      if (!result.success) {
+        const updateUserErrors =
+          result.error?.errors.map((err) => ({
+            code: err.code,
+            message: err.message,
+          })) || [];
 
-    await existingUserByEmail.save({ validateBeforeSave: false });
+        return res
+          .status(403)
+          .json(new ApiResponse(403, updateUserErrors, "Not A Valid Data"));
+      }
 
-    return res.status(200).json(
-      new ApiResponse(
-        200,
+      const { about, socialMedia } = result.data;
+
+      if (!about || !socialMedia) {
+        throw new ApiError(403, "For Update Details One field is required");
+      }
+
+      const userId = req.user?._id;
+
+      const user = await User.findById(userId);
+
+      if (!user) {
+        throw new ApiError(404, "User Not Found");
+      }
+
+      const updateUser = await User.findByIdAndUpdate(
+        userId,
         {
-          success: true,
-          data: {
-            email: existingUserByEmail.email,
-            username: existingUserByEmail.username,
+          $set: {
+            about,
+            socialMedia,
           },
         },
-        "Email Is Valid Opt is Genrated Check Your Email"
-      )
-    );
-  } catch (error: any) {
-    throw new ApiError(500, error?.message);
-  }
-});
-
-const forgotPassword = asyncHandler( async (req: CustomRequest, res: Response) => {
-  try {
-    const result = forgatePasswordSchemaValidation.safeParse(req.body);
-    if (!result.success) {
-      const forgatePassErrors =
-        result.error?.errors.map((err) => ({
-          code: err.code,
-          message: err.message,
-        })) || [];
-
-      return res
-        .status(403)
-        .json(new ApiResponse(403, forgatePassErrors, "Not A Valid Data"));
-    }
-
-    const { email, oldPassword, newPassword } = result.data;
-
-    if (!email) {
-      throw new ApiError(408, "Email Field is Required ");
-    }
-
-    const existingUserByEmail = await User.findOne({ email });
-
-    if (!existingUserByEmail) {
-      throw new ApiError(404, "Email Not Found");
-    }
-    const isCodeNotExpired =
-      new Date(existingUserByEmail.verifyCodeExpiry) > new Date();
-    if (!existingUserByEmail.isVerified) {
-      throw new ApiError(404, "User is not verified please singup again");
-    } else if (!isCodeNotExpired) {
-      return res
-        .status(404)
-        .json(
-          new ApiResponse(
-            404,
-            { success: false },
-            "Verification Code Has Exiperd Please Singup again to get a new Code"
-          )
-        );
-    } else {
-      if (!oldPassword || !newPassword) {
-        throw new ApiError(500, "OldPassword & NewPassword  Field Requred");
-      }
-
-      const isOldPasswordCorrect =
-        await existingUserByEmail.isPasswordCorrect(oldPassword);
-
-      if (!isOldPasswordCorrect) {
-        throw new ApiError(400, "Old Password Is Not Correct");
-      }
-
-      existingUserByEmail.password = newPassword;
-
-      await existingUserByEmail.save();
+        { new: true }
+      ).select("-password -refreshToken -verifyCode -verifyCodeExpiry");
 
       return res
         .status(200)
         .json(
-          new ApiResponse(
-            200,
-            { succes: true, username: existingUserByEmail.username },
-            "Password Update Succesfully"
-          )
+          new ApiResponse(200, updateUser, "Account Details Update Succesfully")
         );
+    } catch (error: any) {
+      throw new ApiError(500, error?.message);
     }
-  } catch (error: any) {
-    throw new ApiError(500, error?.message);
   }
-});
+);
 
-const getCurrentUser = asyncHandler( async (req: CustomRequest, res: Response) => {
-  try {
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, req.user, "User Details Fetched Successfully")
+const updateUserAvatar = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    try {
+      const userId = req.user?._id;
+      const avatarLocalPath = req?.file?.path;
+
+      if (!avatarLocalPath) {
+        throw new ApiError(404, "No Avatar Uploaded || Avatar File Missing");
+      }
+      const oldUser = await User.findById(userId);
+
+      if (!oldUser) {
+        throw new ApiError(400, "No User Found by this id ");
+      }
+
+      const oldAvatarCloudnaryUrl = oldUser.avatar_url;
+
+      if (!oldAvatarCloudnaryUrl) {
+        throw new ApiError(505, "Old Avatar not found");
+      }
+
+      const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+      if (!avatar) {
+        throw new ApiError(400, "Error while uploading the avatar try again");
+      }
+
+      const user = await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            avatar_url: avatar.url,
+          },
+        },
+        { new: true }
       );
-  } catch (error: any) {
-    throw new ApiError(500, error?.message);
-  }
-});
 
-const updateUserAccountDetails = asyncHandler( async (req: CustomRequest, res: Response) => {
-  try {
-    const result = updateUserSchemaValidation.safeParse(req.body);
-    if (!result.success) {
-      const updateUserErrors =
-        result.error?.errors.map((err) => ({
-          code: err.code,
-          message: err.message,
-        })) || [];
+      const response = await deleteFileOnCloudnairy(
+        oldAvatarCloudnaryUrl,
+        "image"
+      );
 
+      if (response.result !== "ok") {
+        throw new ApiError(500, "Failed To Delete old file on CLoudinary");
+      }
       return res
-        .status(403)
-        .json(new ApiResponse(403, updateUserErrors, "Not A Valid Data"));
+        .status(200)
+        .json(new ApiResponse(200, user, "update user avatar succesesfully"));
+    } catch (error: any) {
+      throw new ApiError(500, error?.message);
     }
-
-    const { about, socialMedia } = result.data;
-
-    if (!about || !socialMedia) {
-      throw new ApiError(403, "For Update Details One field is required");
-    }
-
-    const userId = req.user?._id;
-
-    const user = await User.findById(userId);
-
-    if (!user) {
-      throw new ApiError(404, "User Not Found");
-    }
-
-    const updateUser = await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          about,
-          socialMedia,
-        },
-      },
-      { new: true }
-    ).select("-password -refreshToken -verifyCode -verifyCodeExpiry");
-
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, updateUser, "Account Details Update Succesfully")
-      );
-  } catch (error: any) {
-    throw new ApiError(500, error?.message);
   }
-});
-
-const updateUserAvatar = asyncHandler( async (req: CustomRequest, res: Response) => {
-  try {
-    const userId = req.user?._id;
-    const avatarLocalPath = req?.file?.path;
-
-    if (!avatarLocalPath) {
-      throw new ApiError(404, "No Avatar Uploaded || Avatar File Missing");
-    }
-    const oldUser = await User.findById(userId);
-
-    if (!oldUser) {
-      throw new ApiError(400, "No User Found by this id ");
-    }
-
-    const oldAvatarCloudnaryUrl = oldUser.avatar_url;
-
-    if (!oldAvatarCloudnaryUrl) {
-      throw new ApiError(505, "Old Avatar not found");
-    }
-
-    const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-    if (!avatar) {
-      throw new ApiError(400, "Error while uploading the avatar try again");
-    }
-
-    const user = await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          avatar_url: avatar.url,
-        },
-      },
-      { new: true }
-    );
-
-    const response = await deleteFileOnCloudnairy(
-      oldAvatarCloudnaryUrl,
-      "image"
-    );
-
-    if (response.result !== "ok") {
-      throw new ApiError(500, "Failed To Delete old file on CLoudinary");
-    }
-    return res
-      .status(200)
-      .json(new ApiResponse(200, user, "update user avatar succesesfully"));
-  } catch (error: any) {
-    throw new ApiError(500, error?.message);
-  }
-});
+);
 
 export {
   signUpUser,
