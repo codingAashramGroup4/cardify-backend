@@ -41,6 +41,7 @@ export const verifyJwt = async (
     req.user = user;
     next();
   } catch (error: any) {
-    throw new ApiError(500, error?.message);
+    next(error)
+    
   }
 };

@@ -34,6 +34,6 @@ router
 
 router
   .route("/update-user-avatar")
-  .patch(upload.single("avatar"), updateUserAvatar);
+  .patch(upload.single("avatar"), verifyJwt,updateUserAvatar);
 
 export default router;
