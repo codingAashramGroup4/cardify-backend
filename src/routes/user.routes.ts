@@ -11,6 +11,7 @@ import {
   verifyOtp,
   forgotPassword,
   genrateOptForValidEmail,
+  getUserProfile,
 } from "../controllers/user.controller";
 import { verifyJwt } from "../middlewares/auth.middleware";
 
@@ -24,6 +25,8 @@ router.route("/login").post(loginUser);
 router.route("/genrate-otp-for-valid-email").post(genrateOptForValidEmail);
 router.route("/forgot-password").post(forgotPassword);
 
+router.route("/profile/:username").get(getUserProfile);
+
 //protected -route
 router.route("/logout").post(verifyJwt, logoutUser);
 
@@ -34,6 +37,6 @@ router
 
 router
   .route("/update-user-avatar")
-  .patch(upload.single("avatar"), verifyJwt,updateUserAvatar);
+  .patch(upload.single("avatar"), verifyJwt, updateUserAvatar);
 
 export default router;

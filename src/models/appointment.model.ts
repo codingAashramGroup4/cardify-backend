@@ -32,6 +32,15 @@ const appointmentSchema: Schema<Appointment> = new Schema(
       type: String,
       required: [true, "Meet Link is required to book the appointment"],
     },
+
+    card_owner_id: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    card_id: {
+      type: Schema.Types.ObjectId,
+      ref: "Card",
+    },
   },
   { timestamps: true }
 );

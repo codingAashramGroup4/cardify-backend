@@ -633,6 +633,17 @@ const updateUserAvatar = asyncHandler(
   }
 );
 
+// to get the all user details and card associate to the username
+const getUserProfile = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    /*
+      write a aggrigateion pipleine to Get all the user card on the bases of username 
+    */
+    return res.json({});
+  } catch (error: any) {
+    throw new ApiError(500, error?.message);
+  }
+});
 export {
   signUpUser,
   verifyOtp,
@@ -643,4 +654,5 @@ export {
   updateUserAvatar,
   forgotPassword,
   genrateOptForValidEmail,
+  getUserProfile,
 };
