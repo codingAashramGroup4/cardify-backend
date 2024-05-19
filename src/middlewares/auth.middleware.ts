@@ -41,7 +41,6 @@ export const verifyJwt = async (
     req.user = user;
     next();
   } catch (error: any) {
-    next(error)
-    
+    next(error);
   }
 };
