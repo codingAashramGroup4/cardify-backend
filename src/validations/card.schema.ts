@@ -18,8 +18,17 @@ const cardScehamValidation = z.object({
 
   company_socials: z.array(z.string()),
   template_Id: z.number().int(),
-
-  isPublic: z.boolean(),
 });
 
-export { cardScehamValidation };
+const updateCardScehamValidation = z.object({
+  company_about: z
+    .string()
+    .min(10, { message: "Company About Must Be More Then 10 Char" })
+    .max(250, { message: "Company About Be Less Then 25 Char" })
+    .regex(/^[a-zA-Z0-9_]+$/, "Name must not contains special character"),
+
+  company_socials: z.array(z.string()),
+  template_Id: z.number().int(),
+});
+
+export { cardScehamValidation, updateCardScehamValidation };

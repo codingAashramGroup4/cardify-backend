@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface Card extends Document {
   company_name: string;
-  comapny_logo_url?: string;
+  company_logo_url?: string;
   company_banner_url?: string;
   company_about: string;
   company_socials: string[];
@@ -18,11 +18,11 @@ const cardSchema: Schema<Card> = new Schema(
       type: String,
       required: [true, "Comapny name is required to create the card"],
     },
-    comapny_logo_url: {
+    company_banner_url: {
       type: String,
       required: [true, "Comapny logo is required to create the card"],
     },
-    company_banner_url: {
+    company_logo_url: {
       type: String,
       required: [true, "Comapny banner is required to create the card"],
     },

@@ -5,7 +5,7 @@ import { upload } from "../middlewares/multer.middleware";
 import { verifyJwt } from "../middlewares/auth.middleware";
 import {
   deleteCard,
-  getRandomCards,
+  getAllUserCard,
   getUserCardById,
   publishACard,
   togglePublicStatus,
@@ -14,9 +14,7 @@ import {
 
 const router = Router();
 
-router.route("/:cardId").get(getUserCardById);
-
-router.route("/").get(getRandomCards);
+router.route("/:userId").get(getAllUserCard);
 
 //Proctected Route
 

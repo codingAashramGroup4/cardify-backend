@@ -73,7 +73,6 @@ const sendMessageToUser = asyncHandler(async (req: Request, res: Response) => {
     }
 
     if (!result.success) {
-      console.log("Body if not result success");
       const messageError =
         result.error?.errors.map((err) => ({
           code: err.code,
